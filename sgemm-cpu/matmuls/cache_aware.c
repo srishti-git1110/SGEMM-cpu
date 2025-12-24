@@ -24,8 +24,8 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start, NULL);
 
     for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            for (int k = 0; k < N; k++) {
+        for (int k = 0; k < N; k++) {
+            for (int j = 0; j < N; j++) {
                 C[i][j] += A[i][k] * B[k][j];
             }
         }
@@ -34,10 +34,8 @@ int main(int argc, char *argv[]) {
     struct timeval end;
     gettimeofday(&end, NULL);
 
-    /* 203.229 w -O3 level optimization
-    We'll use the same flag for all further implementations
-    */
-    printf("time taken for naive matmul: %0.8lf\n", timeDiff(&start, &end));
+    // 4.49
+    printf("time taken for cache aware matmul: %0.8lf\n", timeDiff(&start, &end));
 
     // to avoid dead code elimination
     double checksum = 0.0;
