@@ -5,15 +5,15 @@ Optimizing matmul on cpu!
 I am using [the following machine](https://www.apple.com/in/shop/buy-mac/macbook-pro/14-inch-space-black-standard-display-apple-m5-chip-with-10-core-cpu-and-10-core-gpu-16gb-memory-512gb) with a 10 core CPU (4 Performance cores+6 Efficiency cores). 
 
 ## Algorithmic complexity of Matrix Multiplication: Calculating the FLOPs required
-Consider two matrices $A,(i \times k)$ and $B,(k \times j)$. The product of $A$ and $B$, $AB$ is a matrix $C$ of shape $(i \times j)$.
+Consider two matrices $A (i \times k)$ and $B (k \times j)$. The product of $A$ and $B$, $AB$ is a matrix $C$ of shape $(i \times j)$.
 
-For simplicity and without loss of generality, let's consider the matrices to be square so we have $A,(n \times n)$, $B,(n \times n)$ and their product $C,(n \times n)$. One element $(c_1, c_2)$ of $C$ is defined as:
+For simplicity and without loss of generality, let's consider the matrices to be square so we have $A (n \times n)$, $B (n \times n)$ and their product $C (n \times n)$. One element $(c_1, c_2)$ of $C$ is defined as:
 
-$ c_{c1,c2} = \sum_{x=1}^{n} a_{c1,x} b_{x,c2} $
+$c_{c1,c2} = \sum_{x=1}^{n} a_{c1,x} b_{x,c2}$
 
 This is a total of 2n - 1 floating point operations (FLOPs) required to calculate one element of C -- $n$ multiplication ops + $(n-1)$ addition ops. A total of $n^2$ elements need to be calculated in $C$ and hence the total FLOPs:
 
-$ (2n - 1) n^2 = 2n^3 - n^2 $
+$(2n - 1) n^2 = 2n^3 - n^2$
 
 As $n$ grows bigger (asymptomatic, if you're feeling fancy), $n^2$ becomes pretty negligible in comparison to $2n^3$ and hence can be ignored so the total FLOPs required is roughly $2n^3$. And the complexity is $O(n^3)$. 
 
