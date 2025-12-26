@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     struct timeval start;
     gettimeofday(&start, NULL);
 
+    
     for (int i = 0; i < N; i++) {
         for (int k = 0; k < N; k++) {
             for (int j = 0; j < N; j++) {
@@ -34,7 +35,13 @@ int main(int argc, char *argv[]) {
     struct timeval end;
     gettimeofday(&end, NULL);
 
-    // 4.49
+    /* ijk -> 203.229 (naive)
+    ikj -> 4.49
+    kij -> 6.471
+    kji -> 534.21
+    jki -> 499.981
+    jik -> 207.639
+    */ 
     printf("time taken for cache aware matmul: %0.8lf\n", timeDiff(&start, &end));
 
     // to avoid dead code elimination
