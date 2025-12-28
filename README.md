@@ -34,7 +34,7 @@ for (int i = 0; i < N; i++) {
     }
 ```
 
-When complied with the `-O3` flag which is the maximum level with safe optimizations, the latency is 299.289 sec. Full compilation command below:
+When complied with the `-O3` flag which is the maximum level with safe optimizations, the latency is **299.289 sec**. Full compilation command below:
 
 ```
 gcc -Wall -O3 sgemm-cpu/matmuls/naive.c -o sgemm-cpu/matmuls/naive
@@ -42,8 +42,26 @@ gcc -Wall -O3 sgemm-cpu/matmuls/naive.c -o sgemm-cpu/matmuls/naive
 
 All the further optimizations use the same flags to compile the code.
 
+### [Local Accumulation](./sgemm-cpu/matmuls/naive_register_accumulation.c)
+
+To make sure the compiler never issues a separate store and load instruction for the running partial sum and thus reduce some latency, we could accumulate the partial sum in a register variable, like so:
+
+
+```C
+for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            float running_sum = 0.0;
+            for (int k = 0; k < N; k++) {
+                running_sum += A[i][k] * B[k][j];
+            }
+            C[i][j] = running_sum;
+        }
+    }
+```
+That brings the latency down to **199.866s**.
+
 ## [Loop reordering](./sgemm-cpu/matmuls/cache_aware.c)
-Experimenting w/ different loop orders, the lowest latency of 4.49s corresponds to order ikj down from 203.229s with order ijk which is a ~45x improvement already!
+Experimenting w/ different loop orders, the lowest latency of **4.49s** corresponds to order ikj down from 203.229s with order ijk which is a ~45x improvement already!
 
 ```C
 for (int i = 0; i < N; i++) {
