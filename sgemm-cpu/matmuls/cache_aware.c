@@ -26,8 +26,9 @@ int main(int argc, char *argv[]) {
     
     for (int i = 0; i < N; i++) {
         for (int k = 0; k < N; k++) {
+            float a_ik = A[i][k];
             for (int j = 0; j < N; j++) {
-                C[i][j] += A[i][k] * B[k][j];
+                C[i][j] += a_ik * B[k][j];
             }
         }
     }
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]) {
     gettimeofday(&end, NULL);
 
     /* ijk -> 203.229 (naive)
-    ikj -> 4.49
+    ikj -> 4.31
     kij -> 6.471
     kji -> 534.21
     jki -> 499.981
