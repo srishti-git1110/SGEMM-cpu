@@ -3,7 +3,7 @@
 #include <sys/time.h>
 
 #define N 4096
-#define TILE_K 32   // try 32, 64, 128
+#define TILE_K 512 
 
 double timeDiff(struct timeval *start, struct timeval *end) {
     double start_sec = start->tv_sec + (start->tv_usec / 1000000.0);
@@ -14,7 +14,6 @@ double timeDiff(struct timeval *start, struct timeval *end) {
 float A[N][N], B[N][N], C[N][N];
 
 int main(int argc, char *argv[]) {
-    // Same initialization as naive
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             A[i][j] = (float)(i + j) / (float) RAND_MAX;
@@ -26,7 +25,6 @@ int main(int argc, char *argv[]) {
     struct timeval start;
     gettimeofday(&start, NULL);
 
-    // K-tiled matrix multiplication
     for (int i = 0; i < N; i++) {
         for (int kt = 0; kt < N; kt += TILE_K) {
 
@@ -34,7 +32,7 @@ int main(int argc, char *argv[]) {
             if (kt_end > N) kt_end = N;
 
             for (int k = kt; k < kt_end; k++) {
-                float a_ik = A[i][k];   // reuse A element
+                float a_ik = A[i][k];   // var a_ik lives in a register,avoids repeated loading fromcache in the loop below
 
                 for (int j = 0; j < N; j++) {
                     C[i][j] += a_ik * B[k][j];
@@ -46,10 +44,10 @@ int main(int argc, char *argv[]) {
     struct timeval end;
     gettimeofday(&end, NULL);
 
+    // best on my machine is 4.29s w TILE_K=512
     printf("time taken for K-tiled matmul: %0.8lf\n",
            timeDiff(&start, &end));
 
-    // Same checksum to avoid dead code elimination
     double checksum = 0.0;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
