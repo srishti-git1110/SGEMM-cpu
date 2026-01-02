@@ -36,16 +36,20 @@ int main(int argc, char *argv[]) {
     struct timeval end;
     gettimeofday(&end, NULL);
 
-    /* ijk -> 203.229 (naive)
+    /* N = 4096
+    ijk -> 203.229 (naive)
     ikj -> 4.31
     kij -> 6.471
     kji -> 534.21
     jki -> 499.981
     jik -> 207.639
     */ 
+
+    /* N = 8192
+    ikj (best order) -> 34.28s
+    */ 
     printf("time taken for cache aware matmul: %0.8lf\n", timeDiff(&start, &end));
 
-    // to avoid dead code elimination
     double checksum = 0.0;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {

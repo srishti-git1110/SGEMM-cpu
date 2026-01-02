@@ -72,3 +72,32 @@ for (int i = 0; i < N; i++) {
         }
     }
 ```
+
+## Tiling
+### [tiled-ijk](./sgemm-cpu/matmuls/ijk_tiled.c)
+Tiled matmul. Tiled on all three loops ijk:
+```C
+for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
+        int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
+
+        for (int j_tile = 0; j_tile < N; j_tile += TILE_J) {
+            int jend = (j_tile + TILE_J < N) ? j_tile + TILE_J : N;
+
+            for (int k_tile = 0; k_tile < N; k_tile += TILE_K) {
+                int kend = (k_tile + TILE_K < N) ? k_tile + TILE_K : N;
+
+                for (int i = i_tile; i < iend; i++) {
+                    for (int k = k_tile; k < kend; k++) {
+                        float a_ik = A[i][k];
+                        for (int j = j_tile; j < jend; j++) {
+                            C[i][j] += a_ik * B[k][j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+```
+This doesn't help much for matrices of size 4096 x 4096 and the lowest latency of 3.16 is corresponding to tile sizes of 128, 256, 128 (ijk respectively). That's a 1s improvement over loop order ikj which is at 4.31s. This is due to the already large caches on my machine.
+
+To hence realize the benefit of tiling, I ran the benchmarks for matrices of size 8192 x 8192. The lowest latency of **26.20s** corresponding to tile size 128 for all three loops is a good improvement over the best loop order ikj which has a latency of **34.28s**. Don't ask about the naive loop order - 46 mins! 😵‍💫
