@@ -1,7 +1,7 @@
 import numpy as np
 import timeit
 
-N = 4096
+N = 8192
 A = np.random.rand(N, N).astype(np.float32)
 B = np.random.rand(N, N).astype(np.float32)
 int3info = np.iinfo(np.int32)
@@ -15,4 +15,5 @@ for i in range(N):
 start = timeit.default_timer()
 C = np.matmul(A, B)
 end = timeit.default_timer()
-print("time taken with NumPy: ", end - start) # 0.1042s
+print("time taken with NumPy: ", end - start) # 0.1042s for N=4096, 0.78 for N=8192
+print("sum of C: ", np.sum(C))

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-#define N 4096
+#define N 8192
 
 double timeDiff(struct timeval *start, struct timeval *end) {
     double start_sec = start->tv_sec + (start->tv_usec / 1000000.0);
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     struct timeval end;
     gettimeofday(&end, NULL);
 
-    // 199.866s
+    // N=4096, 199.866s
     printf("time taken for naive matmul with register optimization: %0.8lf\n", timeDiff(&start, &end));
 
     // to avoid dead code elimination
