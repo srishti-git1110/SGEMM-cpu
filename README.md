@@ -19,7 +19,7 @@ $(2n - 1) n^2 = 2n^3 - n^2$
 
 As $n$ grows bigger (asymptomatic, if you're feeling fancy), $n^2$ becomes pretty negligible in comparison to $2n^3$ and hence can be ignored so the total FLOPs required is roughly $2n^3$. And the complexity is $O(n^3)$. 
 
-For the purpose of this repo, I am keeping $n=4096$ which translates to roughly 137 GFLOPs.
+For the purpose of this repo, I consider $N=4096$ and $N=8192$ which translates to roughly 137 and 1099 GFLOPs respectively.
 
 ## [Naive implementation](./sgemm-cpu/matmuls/naive.c)
 The matmul loop is this:
@@ -34,7 +34,16 @@ for (int i = 0; i < N; i++) {
     }
 ```
 
-When complied with the `-O3` flag which is the maximum level with safe optimizations, the latency is **299.289 sec**. Full compilation command below:
+When complied with the `-O3` flag which is the maximum level with safe optimizations, the latency is: 
+
+| Technique               | 4096     | 8192      | Speedup |
+|------------------------|----------|-----------|---------|
+| `Baseline (np)`        | `0.10 s` | `0.78 s`  | `–`     |
+| `Naive implementation` | `203 s`  | `46 min`  | `-`    |
+
+The speedup column for all further tables is calculated with respect to the row (optimization technique) just above so it simply gives an idea of the amount of improvement we get with a new intervention as compared to what we had just before it.
+
+Full compilation command below:
 
 ```
 gcc -Wall -O3 sgemm-cpu/matmuls/naive.c -o sgemm-cpu/matmuls/naive
@@ -58,10 +67,24 @@ for (int i = 0; i < N; i++) {
         }
     }
 ```
-That brings the latency down to **199.866s**.
+That brings the latency to:
+
+| Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
+|------------------------|----------|-----------|---------|---------|
+| `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |
+| `Naive implementation` | `203s`  | `46min`  | `-`    | `-`    |
+| `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
 
 ## [Loop reordering](./sgemm-cpu/matmuls/cache_aware.c)
-Experimenting w/ different loop orders, the lowest latency of **4.49s** corresponds to order ikj down from 203.229s with order ijk which is a ~45x improvement already!
+Experimenting w/ different loop orders, the lowest latency corresponds to order ikj as follows:
+
+| Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
+|------------------------|----------|-----------|---------|---------|
+| `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |
+| `Naive implementation ` | `203s`  | `46min`  | `-`    | `-`    |
+| `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
+| `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
+
 
 ```C
 for (int i = 0; i < N; i++) {
@@ -75,7 +98,7 @@ for (int i = 0; i < N; i++) {
 
 ## Tiling
 ### [tiled-ijk](./sgemm-cpu/matmuls/ijk_tiled.c)
-Tiled matmul. Tiled on all three loops ijk:
+Tiled on all three loops ijk:
 ```C
 for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
         int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
@@ -98,6 +121,29 @@ for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
         }
     }
 ```
-This doesn't help much for matrices of size 4096 x 4096 and the lowest latency of 3.16 is corresponding to tile sizes of 128, 256, 128 (ijk respectively). That's a 1s improvement over loop order ikj which is at 4.31s. This is due to the already large caches on my machine.
+This doesn't help much for matrices of size 4096 x 4096 due to the already large caches on my machine. Full results:
 
-To hence realize the benefit of tiling, I ran the benchmarks for matrices of size 8192 x 8192. The lowest latency of **26.20s** corresponding to tile size 128 for all three loops is a good improvement over the best loop order ikj which has a latency of **34.28s**. Don't ask about the naive loop order - 46 mins! 😵‍💫
+| Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
+|------------------------|----------|-----------|---------|---------|
+| `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |
+| `Naive implementation ` | `203s`  | `46min`  | `-`    | `-`    |
+| `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
+| `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
+| `ijk tiling (best tile sizes)` | `3.16s` | `26.20s` | `1.36` | `1.3x` |
+
+
+The best tile size for $N=4096$ is 128, 256, 128 for ikj respectively, and for $N=8192$ is 128 for all ikj.
+
+## [Multithreading](./sgemm-cpu/matmuls/multithreaded.c)
+
+| Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
+|------------------------|----------|-----------|---------|---------|
+| `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |
+| `Naive implementation ` | `203s`  | `46min`  | `-`    | `-`    |
+| `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
+| `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
+| `ijk tiling (best tile sizes)` | `3.16s` | `26.20s` | `1.36` | `1.3x` |
+| `Multithreading` |  `1.19s` | `9.88s` | `2.6x` | `2.6x` |
+
+
+
