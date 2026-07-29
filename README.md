@@ -17,7 +17,7 @@ This is a total of 2n - 1 floating point operations (FLOPs) required to calculat
 
 $(2n - 1) n^2 = 2n^3 - n^2$
 
-As $n$ grows bigger (asymptomatic, if you're feeling fancy), $n^2$ becomes pretty negligible in comparison to $2n^3$ and hence can be ignored so the total FLOPs required is roughly $2n^3$. And the complexity is $O(n^3)$. 
+Asymptomatically,, $n^2$ becomes pretty negligible in comparison to $2n^3$ and hence can be ignored so the total FLOPs required is roughly $2n^3$. And the complexity is $O(n^3)$. 
 
 For the purpose of this repo, I consider $N=4096$ and $N=8192$ which translates to roughly 137 and 1099 GFLOPs respectively.
 
@@ -41,7 +41,7 @@ When complied with the `-O3` flag which is the maximum level with safe optimizat
 | `Baseline (np)`        | `0.10 s` | `0.78 s`  | `–`     |
 | `Naive implementation` | `203 s`  | `46 min`  | `-`    |
 
-The speedup column for all further tables is calculated with respect to the row (optimization technique) just above so it simply gives an idea of the amount of improvement we get with a new intervention as compared to what we had just before it.
+The speedup column for all further tables is calculated with respect to the row (optimization technique) just above so it simply gives an idea of the amount of improvement we get with a new intervention.
 
 Full compilation command below:
 
@@ -49,11 +49,11 @@ Full compilation command below:
 gcc -Wall -O3 sgemm-cpu/matmuls/naive.c -o sgemm-cpu/matmuls/naive
 ```
 
-All the further optimizations use the same flags to compile the code.
+All further optimizations use the same flags to compile the code.
 
-### [Local Accumulation](./sgemm-cpu/matmuls/naive_register_accumulation.c)
+### [Register Accumulation](./sgemm-cpu/matmuls/naive_register_accumulation.c)
 
-To make sure the compiler never issues a separate store and load instruction for the running partial sum and thus reduce some latency, we could accumulate the partial sum in a register variable, like so:
+To make sure the compiler never issues separate store and load instructions for C[i][j] at each iteration of the k-loop, we could accumulate the partial sum in a register variable and save some latency, like so:
 
 
 ```C
@@ -136,6 +136,31 @@ The best tile size for $N=4096$ is 128, 256, 128 for ikj respectively, and for $
 
 ## [Multithreading](./sgemm-cpu/matmuls/multithreaded.c)
 
+Using OpenMP: parallelize on the iteration space spanned by the outer two loops and launch 8 threads, like so:
+
+```C
+#pragma omp parallel for collapse(2) num_threads(8) default(none) shared(A, B, C)
+    for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
+        int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
+        for (int j_tile = 0; j_tile < N; j_tile += TILE_J) {
+            int jend = (j_tile + TILE_J < N) ? j_tile + TILE_J : N;
+            for (int k_tile = 0; k_tile < N; k_tile += TILE_K) {
+                int kend = (k_tile + TILE_K < N) ? k_tile + TILE_K : N;
+                for (int i = i_tile; i < iend; i++) {
+                    for (int k = k_tile; k < kend; k++) {
+                        float a_ik = A[i][k];
+                        for (int j = j_tile; j < jend; j++) {
+                            C[i][j] += a_ik * B[k][j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+```
+
+Some good speedups there (as expected) due to the highly parallel nature of work requiring no syncs (ie no cache line bouncing) as a single thread *completely* owns a certain tile of $C$.
+
 | Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
 |------------------------|----------|-----------|---------|---------|
 | `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |
@@ -144,6 +169,3 @@ The best tile size for $N=4096$ is 128, 256, 128 for ikj respectively, and for $
 | `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
 | `ijk tiling (best tile sizes)` | `3.16s` | `26.20s` | `1.36` | `1.3x` |
 | `Multithreading` |  `1.19s` | `9.88s` | `2.6x` | `2.6x` |
-
-
-
