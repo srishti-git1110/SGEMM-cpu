@@ -1,4 +1,4 @@
-// ik i've given a terrible name to this file
+// not to be confused w register blocking
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     gettimeofday(&end, NULL);
 
     // N=4096, 199.866s
-    printf("time taken for naive matmul with register optimization: %0.8lf\n", timeDiff(&start, &end));
+    printf("time taken for naive matmul with register accum optimization: %0.8lf\n", timeDiff(&start, &end));
 
     // to avoid dead code elimination
     double checksum = 0.0;

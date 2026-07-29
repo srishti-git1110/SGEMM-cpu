@@ -34,11 +34,7 @@ int main(int argc, char *argv[]) {
     struct timeval end;
     gettimeofday(&end, NULL);
 
-    /* N=4096, 203.229s 
-    -O3 level optimization, We'll use the same flag for all further implementations
-    */
-
-    // N=8192, 2806.01s 
+    // N=4096, 203.229s; N=8192, 2806.01s 
     printf("time taken for naive matmul: %0.8lf\n", timeDiff(&start, &end));
 
     // to avoid dead code elimination

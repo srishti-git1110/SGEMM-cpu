@@ -25,7 +25,6 @@ double timeDiff(struct timeval *start, struct timeval *end) {
 float A[N][N], B[N][N], C[N][N];
 
 int main(int argc, char *argv[]) {
-
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             A[i][j] = (float)(i + j) / (float) RAND_MAX;
@@ -39,14 +38,11 @@ int main(int argc, char *argv[]) {
 
 #pragma omp parallel for collapse(2) num_threads(8) default(none) shared(A, B, C)
     for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
+        int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
         for (int j_tile = 0; j_tile < N; j_tile += TILE_J) {
-
-            int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
             int jend = (j_tile + TILE_J < N) ? j_tile + TILE_J : N;
-
             for (int k_tile = 0; k_tile < N; k_tile += TILE_K) {
                 int kend = (k_tile + TILE_K < N) ? k_tile + TILE_K : N;
-
                 for (int i = i_tile; i < iend; i++) {
                     for (int k = k_tile; k < kend; k++) {
                         float a_ik = A[i][k];
