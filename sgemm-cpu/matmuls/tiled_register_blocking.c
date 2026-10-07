@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <arm_neon.h>
 
 #ifndef N
 #define N 4096
@@ -46,71 +47,30 @@ int main(int argc, char *argv[]) {
 
                 for (int i = i_tile; i < iend; i += IR) {
                     for (int j = j_tile; j < jend; j += JR) {
-                        float c00 = C[i + 0][j + 0];
-                        float c01 = C[i + 0][j + 1];
-                        float c02 = C[i + 0][j + 2];
-                        float c03 = C[i + 0][j + 3];
 
-                        float c10 = C[i + 1][j + 0];
-                        float c11 = C[i + 1][j + 1];
-                        float c12 = C[i + 1][j + 2];
-                        float c13 = C[i + 1][j + 3];
+                        float32x4_t c0 = vld1q_f32(&C[i+0][j]);
+                        float32x4_t c1 = vld1q_f32(&C[i+1][j]);
+                        float32x4_t c2 = vld1q_f32(&C[i+2][j]);
+                        float32x4_t c3 = vld1q_f32(&C[i+3][j]);
 
-                        float c20 = C[i + 2][j + 0];
-                        float c21 = C[i + 2][j + 1];
-                        float c22 = C[i + 2][j + 2];
-                        float c23 = C[i + 2][j + 3];
-
-                        float c30 = C[i + 3][j + 0];
-                        float c31 = C[i + 3][j + 1];
-                        float c32 = C[i + 3][j + 2];
-                        float c33 = C[i + 3][j + 3];
-                    
                         for (int k = k_tile; k < kend; k++) {
-                            c00 += A[i + 0][k] * B[k][j + 0];
-                            c01 += A[i + 0][k] * B[k][j + 1];
-                            c02 += A[i + 0][k] * B[k][j + 2];
-                            c03 += A[i + 0][k] * B[k][j + 3];
+                            float32x4_t b = vld1q_f32(&B[k][j]);
 
-                            c10 += A[i + 1][k] * B[k][j + 0];
-                            c11 += A[i + 1][k] * B[k][j + 1];
-                            c12 += A[i + 1][k] * B[k][j + 2];
-                            c13 += A[i + 1][k] * B[k][j + 3];
-
-                            c20 += A[i + 2][k] * B[k][j + 0];
-                            c21 += A[i + 2][k] * B[k][j + 1];
-                            c22 += A[i + 2][k] * B[k][j + 2];
-                            c23 += A[i + 2][k] * B[k][j + 3];
-
-                            c30 += A[i + 3][k] * B[k][j + 0];
-                            c31 += A[i + 3][k] * B[k][j + 1];
-                            c32 += A[i + 3][k] * B[k][j + 2];
-                            c33 += A[i + 3][k] * B[k][j + 3];
+                            c0 = vfmaq_n_f32(c0, b, A[i+0][k]);
+                            c1 = vfmaq_n_f32(c1, b, A[i+1][k]);
+                            c2 = vfmaq_n_f32(c2, b, A[i+2][k]);
+                            c3 = vfmaq_n_f32(c3, b, A[i+3][k]);
                         }
-                        C[i + 0][j + 0] = c00;
-                        C[i + 0][j + 1] = c01;
-                        C[i + 0][j + 2] = c02;
-                        C[i + 0][j + 3] = c03;
 
-                        C[i + 1][j + 0] = c10;
-                        C[i + 1][j + 1] = c11;
-                        C[i + 1][j + 2] = c12;
-                        C[i + 1][j + 3] = c13;
-
-                        C[i + 2][j + 0] = c20;
-                        C[i + 2][j + 1] = c21;
-                        C[i + 2][j + 2] = c22;
-                        C[i + 2][j + 3] = c23;
-
-                        C[i + 3][j + 0] = c30;
-                        C[i + 3][j + 1] = c31;
-                        C[i + 3][j + 2] = c32;
-                        C[i + 3][j + 3] = c33;
+                        vst1q_f32(&C[i+0][j], c0);
+                        vst1q_f32(&C[i+1][j], c1);
+                        vst1q_f32(&C[i+2][j], c2);
+                        vst1q_f32(&C[i+3][j], c3);
+                    }
                 }
             }
         }
     }
-}
 
     struct timeval end;
     gettimeofday(&end, NULL);

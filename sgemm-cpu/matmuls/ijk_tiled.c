@@ -39,6 +39,8 @@ int main(int argc, char *argv[]) {
                 for (int i = i_tile; i < iend; i++) {
                     for (int k = k_tile; k < kend; k++) {
                         float a_ik = A[i][k];
+
+                        // diff iters of this j loop can be vectorized
                         for (int j = j_tile; j < jend; j++) {
                             C[i][j] += a_ik * B[k][j];
                         }
