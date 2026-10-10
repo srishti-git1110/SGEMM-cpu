@@ -167,6 +167,12 @@ Best tile sizes:
 
 Using OpenMP: parallelize on the iteration space spanned by the outer two loops and launch 8 threads. Some good speedups there (as expected) due to the highly parallel nature of work requiring no syncs (ie no cache line bouncing) as a single thread *completely* owns a certain tile of $C$.
 
+| Dimension               | $N = 4096$     | $N = 8192$      |
+|------------------------|----------|-----------|
+| TILE_I | 256 | 256 |
+| TILE_J | 256 | 256 |
+| TILE_K | 128 | 128 |
+
 | Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
 |------------------------|----------|-----------|---------|---------|
 | `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |

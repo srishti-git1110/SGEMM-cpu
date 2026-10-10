@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     struct timeval end;
     gettimeofday(&end, NULL);
-    //  for N=8192 , 0.55s for N=4096
+    // 4.2 for N=8192, 0.55s for N=4096
     printf("time taken for row+col parallel, inner-tiling matmul: %0.8lf\n",
            timeDiff(&start, &end));
 
