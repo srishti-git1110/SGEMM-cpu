@@ -1,10 +1,10 @@
 # SGEMM-cpu
 Optimizing matmul on cpu!
 
-Also writing an accompanying [blog](https://srishti-git1110.github.io/blog/matmul-cpu/).
+[Blog](https://srishti-git1110.github.io/blog/matmul-cpu/).
 
 ## Setup
-I am using [the following machine](https://www.apple.com/in/shop/buy-mac/macbook-pro/14-inch-space-black-standard-display-apple-m5-chip-with-10-core-cpu-and-10-core-gpu-16gb-memory-512gb) with a 10 core CPU (4 Performance cores+6 Efficiency cores). 
+[This machine](https://www.apple.com/in/shop/buy-mac/macbook-pro/14-inch-space-black-standard-display-apple-m5-chip-with-10-core-cpu-and-10-core-gpu-16gb-memory-512gb) with a 10 core CPU (4 Performance cores+6 Efficiency cores). 
 
 ## Algorithmic complexity of Matrix Multiplication: Calculating the FLOPs required
 Consider two matrices $A (i \times k)$ and $B (k \times j)$. The product of $A$ and $B$, $AB$ is a matrix $C$ of shape $(i \times j)$.
@@ -22,7 +22,7 @@ Asymptomatically,, $n^2$ becomes pretty negligible in comparison to $2n^3$ and h
 For the purpose of this repo, I consider $N=4096$ and $N=8192$ which translates to roughly 137 and 1099 GFLOPs respectively.
 
 ## [Naive implementation](./sgemm-cpu/matmuls/naive.c)
-The matmul loop is this:
+<!-- The matmul loop is this:
 
 ```C
 for (int i = 0; i < N; i++) {
@@ -32,7 +32,7 @@ for (int i = 0; i < N; i++) {
             }
         }
     }
-```
+``` -->
 
 When complied with the `-O3` flag which is the maximum level with safe optimizations, the latency is: 
 
@@ -53,7 +53,7 @@ All further optimizations use the same flags to compile the code.
 
 ### [Register Accumulation](./sgemm-cpu/matmuls/naive_register_accumulation.c)
 
-To make sure the compiler never issues separate store and load instructions for C[i][j] at each iteration of the k-loop, we could accumulate the partial sum in a register variable and save some latency, like so:
+<!-- To make sure the compiler never issues separate store and load instructions for C[i][j] at each iteration of the k-loop, we could accumulate the partial sum in a register variable and save some latency, like so:
 
 
 ```C
@@ -67,7 +67,7 @@ for (int i = 0; i < N; i++) {
         }
     }
 ```
-That brings the latency to:
+That brings the latency to: -->
 
 | Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
 |------------------------|----------|-----------|---------|---------|
@@ -76,7 +76,7 @@ That brings the latency to:
 | `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
 
 ## [Loop reordering](./sgemm-cpu/matmuls/cache_aware.c)
-Experimenting w/ different loop orders, the lowest latency corresponds to order ikj as follows:
+Order with lowest latency = ikj
 
 | Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
 |------------------------|----------|-----------|---------|---------|
@@ -85,7 +85,7 @@ Experimenting w/ different loop orders, the lowest latency corresponds to order 
 | `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
 | `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
 
-
+<!-- 
 ```C
 for (int i = 0; i < N; i++) {
         for (int k = 0; k < N; k++) {
@@ -94,11 +94,11 @@ for (int i = 0; i < N; i++) {
             }
         }
     }
-```
+``` -->
 
 ## Tiling
 ### [tiled-ijk](./sgemm-cpu/matmuls/ijk_tiled.c)
-Tiled on all three loops ijk:
+<!-- Tiled on all three loops ijk:
 ```C
 for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
         int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
@@ -120,8 +120,16 @@ for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
             }
         }
     }
-```
-This doesn't help much for matrices of size 4096 x 4096 due to the already large caches on my machine. Full results:
+``` -->
+Best tile sizes:
+
+| Dimension               | $N = 4096$     | $N = 8192$      |
+|------------------------|----------|-----------|
+| TILE_I | 128 | 128 |
+| TILE_J | 128 | 128 |
+| TILE_K | 256 | 128 |
+
+
 
 | Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
 |------------------------|----------|-----------|---------|---------|
@@ -132,34 +140,32 @@ This doesn't help much for matrices of size 4096 x 4096 due to the already large
 | `ijk tiling (best tile sizes)` | `3.16s` | `26.20s` | `1.36` | `1.3x` |
 
 
-The best tile size for $N=4096$ is 128, 256, 128 for ikj respectively, and for $N=8192$ is 128 for all ikj.
+
+### [register-blocking](./sgemm-cpu/matmuls/register_blocking.c)
+(Implemented with SIMD and packing of $A$ and $B$)
+
+Best tile sizes:
+
+| Dimension               | $N = 4096$     | $N = 8192$      |
+|------------------------|----------|-----------|
+| TILE_I | 32 | 32 |
+| TILE_J | 32 | 32 |
+| TILE_K | 32 | 32 |
+
+| Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
+|------------------------|----------|-----------|---------|---------|
+| `Baseline (np)`        | `0.10s` | `0.74s`  | `–`     | `–`     |
+| `Naive implementation ` | `203s`  | `46min`  | `-`    | `-`    |
+| `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
+| `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
+| `ijk tiling (best tile sizes)` | `3.16s` | `26.20s` | `1.36x` | `1.3x` |
+| `register blocking w/ packing (best tile sizes)` | `2.45` | `20.3` | `1.29x` | `1.29x` |
+
+
 
 ## [Multithreading](./sgemm-cpu/matmuls/multithreaded.c)
 
-Using OpenMP: parallelize on the iteration space spanned by the outer two loops and launch 8 threads, like so:
-
-```C
-#pragma omp parallel for collapse(2) num_threads(8) default(none) shared(A, B, C)
-    for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
-        int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
-        for (int j_tile = 0; j_tile < N; j_tile += TILE_J) {
-            int jend = (j_tile + TILE_J < N) ? j_tile + TILE_J : N;
-            for (int k_tile = 0; k_tile < N; k_tile += TILE_K) {
-                int kend = (k_tile + TILE_K < N) ? k_tile + TILE_K : N;
-                for (int i = i_tile; i < iend; i++) {
-                    for (int k = k_tile; k < kend; k++) {
-                        float a_ik = A[i][k];
-                        for (int j = j_tile; j < jend; j++) {
-                            C[i][j] += a_ik * B[k][j];
-                        }
-                    }
-                }
-            }
-        }
-    }
-```
-
-Some good speedups there (as expected) due to the highly parallel nature of work requiring no syncs (ie no cache line bouncing) as a single thread *completely* owns a certain tile of $C$.
+Using OpenMP: parallelize on the iteration space spanned by the outer two loops and launch 8 threads. Some good speedups there (as expected) due to the highly parallel nature of work requiring no syncs (ie no cache line bouncing) as a single thread *completely* owns a certain tile of $C$.
 
 | Technique               | 4096     | 8192      | Speedup ($N=4096$) | Speedup ($N=8192$) |
 |------------------------|----------|-----------|---------|---------|

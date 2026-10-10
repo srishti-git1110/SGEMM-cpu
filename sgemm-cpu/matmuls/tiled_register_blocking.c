@@ -9,9 +9,10 @@
 
 #define IR 4
 #define JR 4
-#define TILE_I 64
-#define TILE_J 64
-#define TILE_K 128
+
+#define TILE_I 256
+#define TILE_J 256
+#define TILE_K 256
 
 double timeDiff(struct timeval *start, struct timeval *end) {
     double start_sec = start->tv_sec + (start->tv_usec / 1000000.0);

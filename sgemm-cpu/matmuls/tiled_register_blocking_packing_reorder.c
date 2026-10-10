@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <arm_neon.h>
 
-#define N 4096
+#define N 8192
 
-#define TILE_I 32
-#define TILE_J 32
-#define TILE_K 32
+#define TILE_I 64
+#define TILE_J 128
+#define TILE_K 64
 
 #define IR 4
 #define JR 4
@@ -25,6 +25,7 @@ float A_pack[TILE_I * TILE_K];
 float B_pack[TILE_K * TILE_J];
 
 int main(int argc, char *argv[]) {
+
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             A[i][j] = (float)(i + j) / (float)RAND_MAX;
@@ -33,20 +34,28 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
     struct timeval start;
     gettimeofday(&start, NULL);
 
-    for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
-        int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
-
-        for (int j_tile = 0; j_tile < N; j_tile += TILE_J) {
+    for (int j_tile = 0; j_tile < N; j_tile += TILE_J) {
             int jend = (j_tile + TILE_J < N) ? j_tile + TILE_J : N;
 
-            for (int k_tile = 0; k_tile < N; k_tile += TILE_K) {
+        for (int k_tile = 0; k_tile < N; k_tile += TILE_K) {
                 int kend = (k_tile + TILE_K < N) ? k_tile + TILE_K : N;
 
-                // pack A: 
+            int k_size = kend - k_tile;
+            int b_pos = 0;
+            for (int j = j_tile; j < jend; j += JR) {
+                for (int k = k_tile; k < kend; k++) {
+                    B_pack[b_pos++] = B[k][j + 0];
+                    B_pack[b_pos++] = B[k][j + 1];
+                    B_pack[b_pos++] = B[k][j + 2];
+                    B_pack[b_pos++] = B[k][j + 3];
+                }
+            }
+            for (int i_tile = 0; i_tile < N; i_tile += TILE_I) {
+                int iend = (i_tile + TILE_I < N) ? i_tile + TILE_I : N;
+
                 int a_pos = 0;
                 for (int i = i_tile; i < iend; i += IR) {
                     for (int k = k_tile; k < kend; k++) {
@@ -57,21 +66,11 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                // pack B
-                int b_pos = 0;
+                int b_micro_start = 0;
                 for (int j = j_tile; j < jend; j += JR) {
-                    for (int k = k_tile; k < kend; k++) {
-                        B_pack[b_pos++] = B[k][j + 0];
-                        B_pack[b_pos++] = B[k][j + 1];
-                        B_pack[b_pos++] = B[k][j + 2];
-                        B_pack[b_pos++] = B[k][j + 3];
-                    }
-                }
+                    int a_micro_start = 0;
 
-                int a_micro_start = 0;
-                for (int i = i_tile; i < iend; i += IR) {
-                    int b_micro_start = 0;
-                    for (int j = j_tile; j < jend; j += JR) {
+                    for (int i = i_tile; i < iend; i += IR) {
                         float32x4_t c0 = vld1q_f32(&C[i+0][j]);
                         float32x4_t c1 = vld1q_f32(&C[i+1][j]);
                         float32x4_t c2 = vld1q_f32(&C[i+2][j]);
@@ -80,16 +79,13 @@ int main(int argc, char *argv[]) {
                         float *a_ptr = &A_pack[a_micro_start];
                         float *b_ptr = &B_pack[b_micro_start];
 
-                        for (int k = k_tile; k < kend; k++) {
-
+                        for (int k = 0; k < k_size; k++) {
                             float32x4_t a = vld1q_f32(a_ptr);
                             float32x4_t b = vld1q_f32(b_ptr);
-
                             c0 = vfmaq_n_f32(c0, b, vgetq_lane_f32(a, 0));
                             c1 = vfmaq_n_f32(c1,b, vgetq_lane_f32(a, 1));
                             c2 = vfmaq_n_f32(c2, b, vgetq_lane_f32(a, 2));
                             c3 = vfmaq_n_f32(c3, b, vgetq_lane_f32(a, 3));
-
                             a_ptr += IR;
                             b_ptr += JR;
                         }
@@ -97,28 +93,28 @@ int main(int argc, char *argv[]) {
                         vst1q_f32(&C[i+1][j], c1);
                         vst1q_f32(&C[i+2][j], c2);
                         vst1q_f32(&C[i+3][j], c3);
-
-                        b_micro_start += (kend - k_tile) * JR;
+                        a_micro_start += k_size * IR;
                     }
-                    a_micro_start += (kend - k_tile) * IR;
+                    b_micro_start += k_size * JR;
                 }
             }
         }
     }
 
+
     struct timeval end;
     gettimeofday(&end, NULL);
 
-    // TILE_I = TILE_J = TILE_K = 32
-    // N=4096 2.45s; N=8192 20.3s
-    printf("time taken for packed SIMD register-blocked matmul: %0.8lf\n", timeDiff(&start, &end));
-    
+    // TILE_I = TILE_J = TILE_K = 32 N=4096 2.63s
+    // TILE_I = TILE_J = TILE_K = 128 N=8192 20.3s
+    printf("time taken for BLIS-style packed SIMD matmul: %0.8lf\n", timeDiff(&start, &end));
+
     double checksum = 0.0;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             checksum += C[i][j];
         }
     }
-    printf("sum of C: %0.8lf\n", checksum);
+    printf("sum of C: %0.8lf\n",checksum);
     return 0;
 }
