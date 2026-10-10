@@ -4,11 +4,9 @@
 #include <arm_neon.h>
 
 #define N 4096
-
 #define TILE_I 32
 #define TILE_J 32
 #define TILE_K 32
-
 #define IR 4
 #define JR 4
 

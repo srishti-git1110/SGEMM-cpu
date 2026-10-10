@@ -174,4 +174,5 @@ Using OpenMP: parallelize on the iteration space spanned by the outer two loops 
 | `Naive w register accumulation` | `199s` | `27min` | `1.02x` | `1.7x` |
 | `Loop reordering (ikj)` | `4.31s` | `34.28s` | `46x` | `47x` |
 | `ijk tiling (best tile sizes)` | `3.16s` | `26.20s` | `1.36` | `1.3x` |
-| `Multithreading` |  `1.19s` | `9.88s` | `2.6x` | `2.6x` |
+| `register blocking w/ packing (best tile sizes)` | `2.45` | `20.3` | `1.29x` | `1.29x` |
+| `Multithreading` |  `0.55s` | `4.2s` | `4.45x` | `4.83x` |
